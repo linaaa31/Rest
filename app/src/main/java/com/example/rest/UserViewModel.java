@@ -18,43 +18,56 @@ import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 import retrofit2.http.GET;
-
-interface UserService {
+ interface UserService {
     @GET("/public/v2/users")
     Call<List<User>> fetchAllUsers();
 }
 public class UserViewModel extends ViewModel {
-    private MutableLiveData<List<User>> users;
+    private MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
+    private MutableLiveData<List<User>> users = new MutableLiveData<>();
     private UserService userService;
+    private UserAdapter adapter;
 
     public UserViewModel() {
-        users = new MutableLiveData<>();
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl("https://gorest.co.in")
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
         userService = retrofit.create(UserService.class);
+        adapter = new UserAdapter(new ArrayList<>());
+
     }
 
     public LiveData<List<User>> getUsers() {
         return users;
     }
 
+    public LiveData<Boolean> getIsLoading() {
+        return isLoading;
+    }
+
     public void fetchUsers() {
-        Call<List<User>> call = userService.fetchAllUsers();
-        call.enqueue(new Callback<List<User>>() {
+        isLoading.setValue(true);
+        userService.fetchAllUsers().enqueue(new Callback<List<User>>() {
             @Override
             public void onResponse(Call<List<User>> call, Response<List<User>> response) {
                 if (response.isSuccessful()) {
                     users.setValue(response.body());
+                    adapter.setUsers(response.body());
                 }
+                isLoading.setValue(false);
             }
-
             @Override
             public void onFailure(Call<List<User>> call, Throwable t) {
-                Log.e("RTR", "Error response: " + t);
+                Log.i("RTR", "Error response: " + t);
+                isLoading.setValue(false);
             }
         });
     }
+
+    public UserAdapter getAdapter() {
+        return adapter;
+    }
 }
+
 
